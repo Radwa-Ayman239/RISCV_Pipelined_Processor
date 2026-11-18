@@ -1,0 +1,33 @@
+.text
+.globl _start
+
+_start:
+    ADDI t0, x0, 15        # t0 = 15
+    ADDI t1, x0, -4        # t1 = -4 
+    ADDI t2, x0, 7         # t2 = 7
+
+    # --- Multiplication Instructions ---
+    MUL t3, t0, t1         # Multiply (lower 32 bits)[cite: 2]
+    MULH t4, t0, t1        # Multiply High (Signed x Signed)[cite: 2]
+    MULHSU t5, t1, t0      # Multiply High (Signed x Unsigned)[cite: 2]
+    MULHU t6, t0, t2       # Multiply High (Unsigned x Unsigned)[cite: 2]
+
+    # --- Division & Remainder Instructions (Tested Twice) ---
+    
+    # Signed Division
+    DIV t7, t0, t1         # DIV (Signed 1): 15 / -4 = -3[cite: 2]
+    DIV t8, t1, t2         # DIV (Signed 2): -4 / 7 = 0[cite: 2]
+    
+    # Unsigned Division
+    DIVU t9, t0, t2        # DIVU (Unsigned 1): 15 / 7 = 2[cite: 2]
+    DIVU t10, t1, t2       # DIVU (Unsigned 2): 0xFFFFFFFC / 7[cite: 2]
+    
+    # Signed Remainder
+    REM t11, t0, t1        # REM (Signed 1): 15 % -4 = 3[cite: 2]
+    REM t12, t1, t2        # REM (Signed 2): -4 % 7 = -4[cite: 2]
+    
+    # Unsigned Remainder
+    REMU t13, t0, t2       # REMU (Unsigned 1): 15 % 7 = 1[cite: 2]
+    REMU t14, t1, t2       # REMU (Unsigned 2): 0xFFFFFFFC % 7[cite: 2]
+    
+    ECALL                  # Environment Call to exit[cite: 1]

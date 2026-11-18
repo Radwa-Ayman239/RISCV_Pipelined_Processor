@@ -1,0 +1,36 @@
+.data
+test_word:  .word 0x87654321
+test_half:  .half 0x8765, 0x4321
+test_byte:  .byte 0x87, 0x65, 0x43, 0x21
+dest_mem:   .space 16
+
+.text
+.globl _start
+
+_start:
+    LA t0, test_word       # Load base address of test_word
+
+    # --- Store Instructions ---
+    ADDI t1, x0, 0x12      # Load 0x12 into t1
+    SB t1, 0(t0)           # Store Byte[cite: 1]
+    SH t1, 4(t0)           # Store Halfword[cite: 1]
+    SW t1, 8(t0)           # Store Word[cite: 1]
+
+    # --- Load Instructions (Signed vs Unsigned Tested Twice) ---
+    # Byte Loads
+    LB t2, 0(t0)           # Load Byte (Signed 1): sign extends 0x87[cite: 1]
+    LB t3, 1(t0)           # Load Byte (Signed 2): sign extends 0x65[cite: 1]
+    LBU t4, 0(t0)          # Load Byte Unsigned (Unsigned 1): zero extends 0x87[cite: 1]
+    LBU t5, 1(t0)          # Load Byte Unsigned (Unsigned 2): zero extends 0x65[cite: 1]
+
+    # Halfword Loads
+    LH t6, 0(t0)           # Load Halfword (Signed 1): sign extends 0x8765[cite: 1]
+    LH t7, 2(t0)           # Load Halfword (Signed 2): sign extends 0x4321[cite: 1]
+    LHU t8, 0(t0)          # Load Halfword Unsigned (Unsigned 1): zero extends 0x8765[cite: 1]
+    LHU t9, 2(t0)          # Load Halfword Unsigned (Unsigned 2): zero extends 0x4321[cite: 1]
+
+    # Word Load
+    LW t10, 0(t0)          # Load Word: loads full 32-bit word[cite: 1]
+    
+    # Environment synchronization
+    FENCE                  # Memory fence instruction[cite: 1]
