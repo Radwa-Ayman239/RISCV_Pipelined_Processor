@@ -1,0 +1,50 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2639
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 HelveticaNeue;}
+{\colortbl;\red255\green255\blue255;\red12\green12\blue12;\red251\green251\blue251;}
+{\*\expandedcolortbl;;\cssrgb\c5098\c5098\c5098;\cssrgb\c98824\c98824\c98824;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\partightenfactor0
+
+\f0\fs32 \cf2 \cb3 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Ghada Sherif Ismail\
+CSCE 3301 - Computer Architecture\
+Project 1: femtoRV32\
+Fall 2026\
+\
+November 14-15, 2026:\
+- Worked on extending the pipelined processor to support the remaining RV32I instructions.\
+- Reviewed instruction decoding and ALU control for arithmetic, logic, shifts, and signed/unsigned comparisons.\
+- Worked on branch instructions (BEQ, BNE, BLT, BGE, BLTU, BGEU), jumps (JAL, JALR), LUI, and AUIPC.\
+- Reviewed special instruction behavior: ECALL, PAUSE, FENCE, and FENCE.TSO as no-ops; EBREAK as halt.\
+\
+November 16, 2026:\
+- Worked on the unified instruction/data memory, replacing separate memories with a shared module.\
+- Organized memory as 512 32-bit words (2048 bytes), using byte addresses and word indexing.\
+- Worked on LB, LBU, LH, LHU, LW and SB, SH, SW, including sign/zero extension and byte enables.\
+- Integrated shared memory access with the instruction fetch and memory stages.\
+\
+November 16-17, 2026:\
+- Worked on the memory arbiter to resolve structural hazards between instruction fetch and data access.\
+- Used data-memory priority when instruction and data requests occur together.\
+- Connected/reviewed Grant_IF, Grant_MEM, Stall_IF, PC_Write, and IF_ID_Write behavior.\
+- Debugged stalls to avoid skipping instructions during shared-memory accesses.\
+\
+November 17, 2026:\
+- Updated the simulation testbench to run the full program and check the correct word-memory locations.\
+- Verified SB, SH, and two SW test cases against expected memory values.\
+- Monitored register writeback, branch/jump coverage, and the EBREAK halt condition.\
+- Simulation summary: 11 implemented checks passed, 0 failed, 65 writebacks observed; final PC = 0x0000018C after 500 cycles.\
+\
+\
+November 17-18, 2026:\
+- Investigated Vivado synthesis resource usage and the effect of asynchronous unified-memory reads on RAM inference.\
+- Reviewed the pipelined datapath drawing, especially memory arbitration and hazard connections.\
+- Worked on documenting the MS3 architecture, tests, and remaining issues in the LaTeX report.\
+\
+Current status:\
+- The implemented simulation checks passed and the processor reached EBREAK.\
+- Full instruction-by-instruction verification and successful on-board FPGA testing still require evidence.\
+\
+\
+}
