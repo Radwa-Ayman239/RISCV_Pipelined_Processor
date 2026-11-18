@@ -91,9 +91,6 @@ processor (IF, ID, EX, MEM, WB) supporting:
 5. WHAT DOES NOT WORK / KNOWN ISSUES & WORKAROUNDS
 ================================================================================
 
-
-
-
 . Unaligned Memory Accesses:
    - Halfword and word loads/stores that are not naturally aligned are not supported 
      by the hardware (in accordance with standard RV32I base specifications).
