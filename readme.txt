@@ -1,110 +1,281 @@
-CSCE 3301 - Computer Architecture (Fall 2026)
-Project 1: (Pipelined RISC-V Processor)
-Milestone 3 Submission
+# RISC-V Pipelined Processor
 
-================================================================================
-1. STUDENT INFORMATION
-================================================================================
-Team Members:
-1. Ghada Sherif Ismail       - ID: 900221630
-2. Radwa Ayman AbuElfotouh   - ID: 900242263
+**CSCE 3301 – Computer Architecture | Fall 2026**  
+**Project 1 – Milestone 3 Submission**
 
-Course: CSCE 3301 -- Computer Architecture
-Instructor: Dr. Cherif Salama
-Department of Computer Science and Engineering
-The American University in Cairo (AUC)
-Submission Date: November 18, 2026
+---
 
-================================================================================
-2. PROJECT OVERVIEW
-================================================================================
-Design and Verilog HDL implementation of a 32-bit five-stage pipelined RISC-V 
-processor (IF, ID, EX, MEM, WB) supporting:
-- The complete base RV32I integer instruction set (42 user-level instructions).
-- Bonus Feature 1: Full RV32M integer multiplication and division extension 
-  (MUL, MULH, MULHSU, MULHU, DIV, DIVU, REM, REMU) via MultiplierDivider.v.
-- Bonus Feature 2: Priority-based Memory Arbiter (MemoryArbiter.v) resolving 
-  structural hazards on a single single-ported unified memory with dynamic 
-  stalling (CPI ~ 1.2 instead of the baseline static CPI = 2.0).
-- Hardware hazard management (ForwardingUnit.v and HazardDetectionUnit.v).
-- FPGA support on Digilent Nexys A7-100T with single-step manual clocking and 
-  multiplexed LED and 7-segment display debugging interfaces.
+## 1. Student Information
 
-================================================================================
-3. ASSUMPTIONS
-================================================================================
-1. Single-Ported Memory Constraint:
-   A single physical memory (UnifiedMemory.v) holds both instructions and data.
-   It provides one 32-bit address bus and performs either an instruction fetch 
-   or a data read/write in any given clock cycle.
-2. Memory Alignment:
-   All halfword accesses (LH, LHU, SH) and word accesses (LW, SW) are assumed 
-   to be naturally aligned to 2-byte and 4-byte boundaries, respectively.
-3. Byte-Addressable Word Indexing:
-   The memory comprises 512 32-bit words (2048 bytes). Byte address bits addr[10:2] 
-   index the 32-bit word, while addr[1:0] specify the byte offset within the word.
-4. Architectural Register x0:
-   Register x0 is hardwired to constant 0. Any write operation targeting x0 is 
-   discarded, and forwarding from x0 is strictly suppressed.
-5. Special Instruction Behavior:
-   - EBREAK (0x00100073) is treated as a terminal halt instruction that permanently 
-     freezes the Program Counter and disables further pipeline updates.
-   - ECALL, PAUSE, FENCE, and FENCE.TSO are executed as architectural NOPs.
+| Information | Details |
+|---|---|
+| **Team Member 1** | Ghada Sherif Ismail – 900221630 |
+| **Team Member 2** | Radwa Ayman AbuElfotouh – 900242263 |
+| **Course** | CSCE 3301 – Computer Architecture |
+| **Instructor** | Dr. Cherif Salama |
+| **Department** | Computer Science and Engineering |
+| **University** | The American University in Cairo (AUC) |
+| **Submission Date** | November 18, 2026 |
 
-================================================================================
-4. WHAT WORKS
-================================================================================
-- Instruction Execution (100% of Required Base ISA + Bonus M-Extension):
-  * R-Type: ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND.
-  * I-Type: ADDI, SLTI, SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI.
-  * Loads: LB, LBU, LH, LHU, LW with correct sign/zero extension.
-  * Stores: SB, SH, SW with exact byte-enable masking across offsets.
-  * Branches: BEQ, BNE, BLT, BGE, BLTU, BGEU (both taken and not-taken).
-  * Jumps: JAL (PC-relative) and JALR (register-indirect with LSB clearing), 
-    with link return address (PC+4) written to rd.
-  * Upper Immediates: LUI and AUIPC (PC + Imm) writeback.
-  * Bonus RV32M: MUL, MULH, MULHSU, MULHU, DIV, DIVU, REM, REMU with complete 
-    division-by-zero protection (returning 0xFFFFFFFF for DIV/DIVU and dividend 
-    for REM/REMU).
-  * System: EBREAK cleanly halts CPU updates; ECALL/PAUSE/FENCE execute as NOPs.
+---
 
-- Hazard Handling & Pipeline Control:
-  * RAW Data Forwarding: EX-to-EX and MEM-to-EX operand forwarding to ALU inputs 
-    with strict EX/MEM priority over MEM/WB.
-  * Store Data Forwarding: Forwarded store data routes directly to the memory 
-    write register, bypassing the immediate multiplexer.
-  * Load-Use Stalls: HazardDetectionUnit accurately stalls PC_Write and IF_ID_Write 
-    for 1 cycle while injecting a zeroed control bubble into ID/EX.
-  * Control Hazard Flushing: Branch condition evaluation in the EX stage triggers 
-    synchronous pipeline flushing (inserting 0x00000013 NOP into IF/ID and clearing 
-    control registers) to prevent wrong-path instructions from committing.
-  * Memory Arbitration: MemoryArbiter prioritizes data memory access over instruction 
-    fetch, stalling IF only during load/store cycles.
+## 2. Project Overview
 
-- Verification Results:
-  * Modular test programs in UnifiedMemory.v verified in Vivado XSim with exact 
-    register values confirmed in waveforms.
-  * Automated regression testbench (RISCV_pipeline_TB.v) passed 11/11 automated checks, 
-    observed 65 register writebacks, and verified memory store contents.
+This project involves the design and Verilog HDL implementation of a **32-bit, five-stage pipelined RISC-V processor**, supporting the complete base RV32I instruction set, the RV32M multiplication and division extension, hardware hazard management, and unified memory arbitration.
 
-================================================================================
-5. WHAT DOES NOT WORK / KNOWN ISSUES & WORKAROUNDS
-================================================================================
+### Pipeline Architecture
 
-. Unaligned Memory Accesses:
-   - Halfword and word loads/stores that are not naturally aligned are not supported 
-     by the hardware (in accordance with standard RV32I base specifications).
+The processor implements five stages:
 
-================================================================================
-6. HOW TO SIMULATE & RUN
-================================================================================
-1. Open the project in Vivado (2020.2 or later).
-2. Set `RISCV_pipeline_TB` as the top simulation module.
-3. In `UnifiedMemory.v`:
-   - To run the full regression test with 11 automated memory checks: ensure lines 
-     34..191 are active.
-   - To run modular tests: uncomment Program 1 (lines 204..238), Program 2 (lines 
-     280..345), Program 3 (lines 371..392), or Program 4 (lines 431..451).
-4. Run Behavioral Simulation for 5000 ns.
-5. Observe the console output for "ALL IMPLEMENTED CHECKS PASSED" and compare 
-   the waveform against the screenshots saved in `Sources/SimulationTesting/`.
+| Stage | Name | Function |
+|---|---|---|
+| IF | Instruction Fetch | Fetches instructions from unified memory |
+| ID | Instruction Decode | Decodes instructions and reads registers |
+| EX | Execute | Performs ALU operations, multiplication/division, and branch evaluation |
+| MEM | Memory Access | Performs load and store operations |
+| WB | Write Back | Writes computation and load results to registers |
+
+### Main Features
+
+- **RV32I Instruction Set:** Complete implementation of 42 user-level instructions.
+- **Bonus Feature 1 – RV32M Extension:** Full integer multiplication and division support using `MultiplierDivider.v`.
+  - `MUL`, `MULH`, `MULHSU`, `MULHU`
+  - `DIV`, `DIVU`, `REM`, `REMU`
+- **Bonus Feature 2 – Priority-Based Memory Arbiter:** `MemoryArbiter.v` resolves structural hazards in the single-ported unified memory using dynamic stalling.
+  - Dynamic CPI ≈ 1.2
+  - Baseline static CPI = 2.0
+- **Hardware Hazard Management:**
+  - Data forwarding using `ForwardingUnit.v`
+  - Load-use stall detection using `HazardDetectionUnit.v`
+  - Control hazard flushing
+- **FPGA Implementation:**
+  - Digilent Nexys A7-100T
+  - Single-step manual clocking
+  - Multiplexed LED debugging interface
+  - Seven-segment display debugging interface
+
+---
+
+## 3. Design Assumptions
+
+### 3.1 Single-Ported Memory Constraint
+
+A single physical memory module, `UnifiedMemory.v`, stores both instructions and data.
+
+The memory provides one 32-bit address bus and performs either an instruction fetch or a data read/write during any given clock cycle.
+
+### 3.2 Memory Alignment
+
+All memory accesses are assumed to be naturally aligned:
+
+- Halfword accesses (`LH`, `LHU`, `SH`) use 2-byte alignment.
+- Word accesses (`LW`, `SW`) use 4-byte alignment.
+
+### 3.3 Byte-Addressable Word Indexing
+
+The unified memory contains:
+
+- **512 words**, each 32 bits wide.
+- **2048 bytes** of total storage.
+- `addr[10:2]` selects the memory word.
+- `addr[1:0]` selects the byte offset within the word.
+
+### 3.4 Architectural Register x0
+
+Register `x0` is permanently hardwired to zero.
+
+- Writes targeting `x0` are discarded.
+- Forwarding from register `x0` is suppressed.
+
+### 3.5 Special Instruction Behavior
+
+| Instruction | Behavior |
+|---|---|
+| `EBREAK` | Permanently halts processor execution and freezes pipeline updates |
+| `ECALL` | Executed as NOP |
+| `PAUSE` | Executed as NOP |
+| `FENCE` | Executed as NOP |
+| `FENCE.TSO` | Executed as NOP |
+
+The `EBREAK` instruction encoding is `0x00100073`.
+
+---
+
+## 4. Working Features
+
+### 4.1 Instruction Execution
+
+The processor supports the complete required RV32I instruction set and the bonus RV32M extension.
+
+| Instruction Category | Supported Instructions |
+|---|---|
+| R-Type | `ADD`, `SUB`, `SLL`, `SLT`, `SLTU`, `XOR`, `SRL`, `SRA`, `OR`, `AND` |
+| I-Type | `ADDI`, `SLTI`, `SLTIU`, `XORI`, `ORI`, `ANDI`, `SLLI`, `SRLI`, `SRAI` |
+| Loads | `LB`, `LBU`, `LH`, `LHU`, `LW` |
+| Stores | `SB`, `SH`, `SW` |
+| Branches | `BEQ`, `BNE`, `BLT`, `BGE`, `BLTU`, `BGEU` |
+| Jumps | `JAL`, `JALR` |
+| Upper Immediates | `LUI`, `AUIPC` |
+| RV32M Extension | `MUL`, `MULH`, `MULHSU`, `MULHU`, `DIV`, `DIVU`, `REM`, `REMU` |
+| System | `EBREAK`, `ECALL`, `PAUSE`, `FENCE`, `FENCE.TSO` |
+
+**Additional Instruction Details**
+
+- Loads perform appropriate sign extension or zero extension.
+- Stores use byte-enable masking for byte and halfword accesses.
+- Branch instructions support both taken and not-taken conditions.
+- `JAL` uses PC-relative addressing.
+- `JALR` uses register-indirect addressing with least-significant-bit clearing.
+- Jump instructions write the return address (`PC + 4`) into `rd`.
+- `AUIPC` computes `PC + Immediate`.
+
+**RV32M Division-by-Zero Handling**
+
+| Operation | Division-by-Zero Result |
+|---|---|
+| `DIV` | `0xFFFFFFFF` |
+| `DIVU` | `0xFFFFFFFF` |
+| `REM` | Original dividend |
+| `REMU` | Original dividend |
+
+### 4.2 Hazard Handling and Pipeline Control
+
+#### Data Forwarding
+
+Implemented in `ForwardingUnit.v`.
+
+- Supports EX-to-EX forwarding.
+- Supports MEM-to-EX forwarding.
+- Prioritizes EX/MEM forwarding over MEM/WB forwarding.
+- Suppresses forwarding from register `x0`.
+
+#### Store Data Forwarding
+
+Forwarded store data is routed directly to the memory write-data register, bypassing the immediate multiplexer.
+
+#### Load-Use Hazard Detection
+
+Implemented in `HazardDetectionUnit.v`.
+
+When a load-use dependency occurs:
+
+1. `PC_Write` is stalled.
+2. `IF_ID_Write` is stalled.
+3. A zeroed control bubble is injected into ID/EX.
+4. Execution resumes after one stall cycle.
+
+#### Control Hazard Flushing
+
+Branches are evaluated during the EX stage.
+
+When a branch is taken:
+
+- Incorrectly fetched instructions are flushed.
+- A `0x00000013` NOP is inserted into IF/ID.
+- Relevant pipeline control registers are cleared.
+- Wrong-path instructions are prevented from committing architectural changes.
+
+#### Unified Memory Arbitration
+
+Implemented in `MemoryArbiter.v`.
+
+The memory arbiter:
+
+- Gives priority to data memory accesses over instruction fetching.
+- Resolves structural hazards caused by the single-ported unified memory.
+- Dynamically stalls instruction fetching during load/store memory accesses.
+- Avoids the need for unconditional instruction-fetch stalling.
+
+### 4.3 Verification Results
+
+Verification was performed using **Vivado XSim**.
+
+- Modular test programs were implemented in `UnifiedMemory.v`.
+- Register results were verified using simulation waveforms.
+- The automated regression testbench `RISCV_pipeline_TB.v` passed **11 out of 11 checks**.
+- A total of **65 register writebacks** were observed.
+- Memory store contents were verified.
+
+---
+
+## 5. Known Limitations and Workarounds
+
+### Unaligned Memory Accesses
+
+The current hardware does not support unaligned halfword or word memory accesses.
+
+All test programs must use naturally aligned addresses:
+
+- 2-byte boundaries for halfword operations.
+- 4-byte boundaries for word operations.
+
+This is an implementation limitation; the processor assumes naturally aligned memory accesses.
+
+---
+
+## 6. How to Simulate and Run
+
+### Requirements
+
+- Xilinx Vivado 2020.2 or later
+- Vivado XSim Simulator
+- Verilog HDL source files
+
+### Simulation Instructions
+
+**Step 1 – Open Vivado**
+
+Launch Xilinx Vivado and create or open the project containing the Verilog source files.
+
+**Step 2 – Configure the Simulation Top Module**
+
+Set the simulation top module to:
+
+`RISCV_pipeline_TB`
+
+**Step 3 – Select the Test Program**
+
+Open `UnifiedMemory.v` and choose one of the available programs.
+
+| Test Program | Source Lines |
+|---|---|
+| Full Automated Regression Test | 34–191 |
+| Program 1 | 204–238 |
+| Program 2 | 280–345 |
+| Program 3 | 371–392 |
+| Program 4 | 431–451 |
+
+For the full regression test, ensure lines 34–191 are active.
+
+For modular testing, uncomment the desired program and ensure that only the intended memory initialization program is active.
+
+**Step 4 – Run Behavioral Simulation**
+
+Run the behavioral simulation for:
+
+`5000 ns`
+
+**Step 5 – Verify Results**
+
+Check the XSim console for:
+
+`ALL IMPLEMENTED CHECKS PASSED`
+
+Compare register writeback values, memory contents, and pipeline signals with the waveform screenshots in:
+
+`Sources/SimulationTesting/`
+
+---
+
+## 7. Project Summary
+
+The project implements a five-stage, 32-bit pipelined RISC-V processor with complete RV32I instruction support, bonus RV32M arithmetic capabilities, and a priority-based arbiter for unified memory access.
+
+The architecture incorporates data forwarding, load-use stalls, branch flushing, and dynamic memory arbitration to manage pipeline hazards.
+
+Simulation testing demonstrates successful execution of the implemented instruction categories and passing results for all 11 automated regression checks.
+
+---
+
+**American University in Cairo – CSCE 3301 – Fall 2026**  
+**Project 1 | Milestone 3**
