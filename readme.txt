@@ -1,5 +1,5 @@
 CSCE 3301 - Computer Architecture (Fall 2026)
-Project 1: femtoRV32 (Pipelined RISC-V Processor)
+Project 1: (Pipelined RISC-V Processor)
 Milestone 3 Submission
 
 ================================================================================
